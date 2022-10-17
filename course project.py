@@ -1,10 +1,11 @@
-## Выгрузка из ВК: создает словарь {like: type: url} из самых больших фоток.
-# Пока не удалось победить проблему, когда количество лайков повторяется
+## V Выгрузка из ВК: создает словарь {like: type: url} из самых больших фоток.
+#  V Когда количество лайков повторяется  к ключу like добавляется дата.
 ## Выгрузка на Яндекс Диск: Основа есть, но пока не знаю, как по урлам туда загружать
 # Разобраться с requirements и прогресс-бар(что такое, впервые слышу...)
 
 import requests
 from pprint import pprint
+from datetime import datetime
 
 with open('TokenVK.txt', 'r') as file:
     tokenVK = file.read().strip()
@@ -35,14 +36,17 @@ class USER_VK:
         """отбор фоток по размеру. Фиксация количества лайков.
         На выходе словарь, где ключ - это кол-во лайков,
         а значение - список состоящий из url-фото и даты"""
-        photo_dict, ph_max = {}, {}
-        sizes_dict = {}
+        photo_dict, sizes_dict = {}, {}
         for album in self.get_photo_to_unload_vk()['response']['items']:
-            like = album['likes']['count']
+            likes = album['likes']['count']
+            date = datetime.fromtimestamp(album['date'])
             for s in album['sizes']:
                 sizes_dict[s['type']] = [s['height'] * s['width'], s['type'], s['url']]
-            ph_max[like] = max(sizes_dict.values())
-        return ph_max
+            if likes not in photo_dict.keys():
+                photo_dict[likes] = max(sizes_dict.values())
+            else:
+                photo_dict[str(likes) + '_' + str(date)] = max(sizes_dict.values())
+        return photo_dict
 
 
 class YaUploader:
