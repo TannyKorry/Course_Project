@@ -7,6 +7,7 @@
 
 import os
 import requests
+import shutil
 from pprint import pprint
 from datetime import datetime
 
@@ -40,8 +41,8 @@ class USER_VK:
 
     def _sort_ph(self):
         """отбор фоток по размеру. Фиксация количества лайков.
-        На выходе словарь, где ключ - это кол-во лайков(при повторении + дата),
-        а значение - список состоящий из типоразмера и url фото"""
+        На выходе словарь, где ключ - ID,
+        а значение - список состоящий из кол-во лайков, дата, типоразмера и url фото"""
         sizes_dict = {}
         for album in self._get_photo_to_unload_vk()['response']['items']:
             likes = str(album['likes']['count'])
@@ -55,7 +56,7 @@ class USER_VK:
                     sizes_dict[id] = [likes, date, s['type'], s['url']]
         return sizes_dict
 
-    def name_creating(self):
+    def _name_creating(self):
         photo_dict = {}
         for attribute in self._sort_ph().values():
             if str(attribute[0]) + '.jpg' not in photo_dict.keys():
@@ -66,16 +67,16 @@ class USER_VK:
 
     def save_pc(self):
         """Функция скачивает контент на комп в папку BACKUP"""
-
         os.mkdir('BACKUP')
         path = os.path.join(os.getcwd(), 'BACKUP')
-        for name, props in self.name_creating().items():
+        for name, props in self._name_creating().items():
             full_path = os.path.join(path, str(name))
             print(full_path)
             ph = requests.get(props[-1])
             out = open(full_path, "wb")
             out.write(ph.content)
             out.close()
+
 
 # Формирование выходных данных как в задании ?????????????????
     def regrouping(self):
