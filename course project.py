@@ -1,7 +1,10 @@
 ## V Выгрузка из ВК: создает словарь {id: [likes, date, type, url} из самых больших фоток. !!! Исправлены ошибки
-#  V Формирование имени будущего файла из кол-ва лайков. Если количество лайков повторяется, к значению likes добавляется дата.
-#  V Создание папки для резервного копирования на компе и загрузка в нее файлов
-## Выгрузка на Яндекс Диск: Основа есть, но пока не знаю, как по урлам туда загружать
+##  V Формирование имени будущего файла из кол-ва лайков. Если количество лайков повторяется,
+#  к значению likes добавляется дата.
+##  V Создание папки для резервного копирования на компе и загрузка в нее файлов
+## V Выгрузка на Яндекс Диск организована с помощью буферной папки на компе. Пока не знаю, как по урлам без компа туда загружать
+## V Организован вывод инфы по процессу загрузки-выгрузки. Разобраться правильно ли я поняла процесс логирования.
+# Добавить к выводимой информации данные по типоразмеру
 # Удаление папки резервного копирования с компа
 # Разобраться с requirements и прогресс-бар(что такое, впервые слышу...)
 
@@ -10,13 +13,6 @@ import requests
 import shutil
 from pprint import pprint
 from datetime import datetime
-
-
-with open('TokenVK.txt', 'r') as file:
-    tokenVK = file.read().strip()
-
-with open('TokenYa.txt', 'r') as f:
-    tokenYa = f.read().strip()
 
 
 class USER_VK:
@@ -42,7 +38,7 @@ class USER_VK:
     def _sort_ph(self):
         """отбор фоток по размеру. Фиксация количества лайков.
         На выходе словарь, где ключ - ID,
-        а значение - список состоящий из кол-во лайков, дата, типоразмера и url фото"""
+        а значение - список состоящий из кол-во лайков, дата, типоразмер и url фото"""
         sizes_dict = {}
         for album in self._get_photo_to_unload_vk()['response']['items']:
             likes = str(album['likes']['count'])
@@ -56,9 +52,16 @@ class USER_VK:
                     sizes_dict[id] = [likes, date, s['type'], s['url']]
         return sizes_dict
 
+        # Формирование выходных данных как в задании ?????????????????
+    def _regrouping(self):
+        favorits = []
+        for k, v in self._sort_ph().items():
+            favorits.append({'file_name': k, 'sizes': v[-2]})
+        return favorits
+
     def _name_creating(self):
         photo_dict = {}
-        for attribute in self._sort_ph().values():
+        for attribute in self._sort_ph().values(): # [likes, date, s['type'], s['url']]
             if str(attribute[0]) + '.jpg' not in photo_dict.keys():
                 photo_dict[str(attribute[0]) + '.jpg'] = attribute[-1:]
             else:
@@ -68,68 +71,75 @@ class USER_VK:
     def save_pc(self):
         """Функция скачивает контент на комп в папку BACKUP"""
         os.mkdir('BACKUP')
+        print('Создание папки BACKUP для резервного копирования на компьютере')
         path = os.path.join(os.getcwd(), 'BACKUP')
+        name_list = []
         for name, props in self._name_creating().items():
+            print(f'Загрузка файла: {name}')
             full_path = os.path.join(path, str(name))
-            print(full_path)
+            name_list.append(name)
             ph = requests.get(props[-1])
             out = open(full_path, "wb")
             out.write(ph.content)
             out.close()
-
-
-# Формирование выходных данных как в задании ?????????????????
-    def regrouping(self):
-        favorits = []
-        for k, v in self.sort_ph().items():
-           favorits.append({'file_name': k, 'sizes': v[-2]})
-        return favorits
+        return name_list
 
 
 
-# class YaUploader:
-#     def __init__(self, token: str):
-#         self.token = tokenYa
-#         self.url = 'https://cloud-api.yandex.net/v1/disk/resources/'
+class YaUploader:
+    def __init__(self, token: str):
+        self.token = tokenYa
+        self.url = 'https://cloud-api.yandex.net/v1/disk/resources/'
+
+    def _get_headers(self):
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': f'OAuth {self.token}'
+        }
+
+    def _get_upload_link(self, file_path):
+        upload_url = self.url + 'upload'
+        headers = self._get_headers()
+        params = {'path': file_path, 'overwrite': 'true'}
+        response = requests.get(upload_url, headers=headers, params=params)
+        return response.json()
 #
-#     def _get_headers(self):
-#         return {
-#             'Content-Type': 'application/json',
-#             'Authorization': f'OAuth {self.token}'
-#         }
-#
-#     def _get_upload_link(self, file_path):
-#         upload_url = self.url + 'upload'
-#         headers = self._get_headers()
-#         params = {'path': file_path, 'overwrite': 'true'}
-#         response = requests.get(upload_url, headers=headers, params=params)
-#         return response.json()
-#
-#     def _add_folder(self, path):
-#         headers = self._get_headers()
-#         requests.put(f'{self.url}?path={path}', headers=headers)
-#
-#     def _upload(self, file_path, path_to_file):
-#         link_dict = self._get_upload_link(file_path=file_path)
-#         href = link_dict['href']
-#         response = requests.put(href, data=open(path_to_file, 'rb'))
-#         response.raise_for_status()
-#         if response.status_code == 201:
-#             print('Success')
-#
-#     def upload_files_from_a_list(self, path_to_file_list):
-#         for path_to_file in path_to_file_list:
-#             directory, file_name = path_to_file.split('/')
-#             uploader._add_folder(directory)
-#             uploader._upload(path_to_file, path_to_file)
-#
+    def _add_folder(self, path):
+        headers = self._get_headers()
+        requests.put(f'{self.url}?path={path}', headers=headers)
 
-unloader = USER_VK('1')
+    def _upload(self, file_path, path_to_file):
+        link_dict = self._get_upload_link(file_path=file_path)
+        href = link_dict['href']
+        response = requests.put(href, data=open(path_to_file, 'rb'))
+        response.raise_for_status()
+        if response.status_code == 201:
+            print('Success')
 
-unloader.save_pc()
+    def upload_files_from_a_list(self):
+        name_list = unloader.save_pc()
+        for name in name_list:
+            path_to_file = os.path.join('BACKUP_UserVK', name)
+            print(path_to_file)
+            directory, file_name = path_to_file.split('\\')
+            uploader._add_folder(directory)
+            uploader._upload((directory + '/' + name), os.path.join('BACKUP', name))
 
 
-# uploader = YaUploader(tokenYa)
-# uploader._add_folder('Course_Project')
-# path_to_file_list = ['Course_Project/https://sun9-west.userapi.com/sun9-6/s/v1/if1/1OCyHTvNRzj8B1BRF1l9o034d1XEZNWuhwVvPePqAk7ksfrWa_Yj-TnmBRPXCuT8trNdAw.jpg?size=908x1080&quality=96&type=album']
-#
+if __name__ == '__main__':
+
+    with open('TokenVK.txt', 'r') as file:
+        tokenVK = file.read().strip()
+
+    with open('TokenYa.txt', 'r') as f:
+        tokenYa = f.read().strip()
+
+    unloader = USER_VK('27513')
+
+    # pprint(unloader.save_pc())
+
+
+    uploader = YaUploader(tokenYa)
+
+
+    pprint(uploader.upload_files_from_a_list())
