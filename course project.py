@@ -6,11 +6,12 @@ from datetime import datetime
 
 
 class USER_VK:
-    def __init__(self, users_id: str, version='5.131'):
+    def __init__(self, users_id: str, count=5, version='5.131'):
         self.url = 'https://api.vk.com/method/'
         self.users_id = users_id
         self.params = {
             'access_token': tokenVK,
+            'count': count,
             'v': version
         }
 
@@ -44,7 +45,7 @@ class USER_VK:
 
     def _name_creating(self):
         photo_dict = {}
-        for attribute in self._sort_ph().values(): # [likes, date, s['type'], s['url']]
+        for attribute in self._sort_ph().values():
             if str(attribute[0]) + '.jpg' not in photo_dict.keys():
                 photo_dict[str(attribute[0]) + '.jpg'] = attribute[-2:]
             else:
@@ -100,9 +101,9 @@ class YaUploader:
 
     def upload_files_from_a_list(self):
         name_list = unloader.save_pc()
+        print('Создание папки BACKUP_UserVK на Яндекс.Диск')
         for name in name_list:
             path_to_file = os.path.join('BACKUP_UserVK', name)
-            print('Создание папки BACKUP_UserVK на Яндекс.Диск')
             directory, file_name = path_to_file.split('\\')
             uploader._add_folder(directory)
             uploader._upload((directory + '/' + name), os.path.join('BACKUP', name))
