@@ -1,12 +1,3 @@
-## V Выгрузка из ВК: создает словарь {id: [likes, date, type, url} из самых больших фоток. !!! Исправлены ошибки
-## V Формирование имени будущего файла из кол-ва лайков. Если количество лайков повторяется, к значению likes добавляется дата.
-## V Создание папки для резервного копирования на компе и загрузка в нее файлов
-## V Выгрузка на Яндекс Диск организована с помощью буферной папки на компе. Пока не знаю, как по урлам без компа туда загружать
-## V Организован вывод инфы по процессу загрузки-выгрузки. Разобраться правильно ли я поняла процесс логирования.
-# Добавить к выводимой информации данные по типоразмеру
-## V Удаление папки резервного копирования с компа
-# Разобраться с requirements и прогресс-бар(что такое, впервые слышу...)
-
 import os
 import requests
 import shutil
@@ -51,20 +42,13 @@ class USER_VK:
                     sizes_dict[id] = [likes, date, s['type'], s['url']]
         return sizes_dict
 
-        # Формирование выходных данных как в задании ?????????????????
-    def _regrouping(self):
-        favorits = []
-        for k, v in self._sort_ph().items():
-            favorits.append({'file_name': k, 'sizes': v[-2]})
-        return favorits
-
     def _name_creating(self):
         photo_dict = {}
         for attribute in self._sort_ph().values(): # [likes, date, s['type'], s['url']]
             if str(attribute[0]) + '.jpg' not in photo_dict.keys():
-                photo_dict[str(attribute[0]) + '.jpg'] = attribute[-1:]
+                photo_dict[str(attribute[0]) + '.jpg'] = attribute[-2:]
             else:
-                photo_dict[str(attribute[0]) + '_' + str(attribute[1]) + '.jpg'] = attribute[-1:]
+                photo_dict[str(attribute[0]) + '_' + str(attribute[1]) + '.jpg'] = attribute[-2:]
         return photo_dict
 
     def save_pc(self):
@@ -74,7 +58,7 @@ class USER_VK:
         path = os.path.join(os.getcwd(), 'BACKUP')
         name_list = []
         for name, props in self._name_creating().items():
-            print(f'Загрузка файла: {name}')
+            print(f'Загрузка файла: {name}, size: {props[-2]}')
             full_path = os.path.join(path, str(name))
             name_list.append(name)
             ph = requests.get(props[-1])
@@ -82,7 +66,6 @@ class USER_VK:
             out.write(ph.content)
             out.close()
         return name_list
-
 
 
 class YaUploader:
@@ -102,7 +85,7 @@ class YaUploader:
         params = {'path': file_path, 'overwrite': 'true'}
         response = requests.get(upload_url, headers=headers, params=params)
         return response.json()
-#
+
     def _add_folder(self, path):
         headers = self._get_headers()
         requests.put(f'{self.url}?path={path}', headers=headers)
@@ -119,14 +102,17 @@ class YaUploader:
         name_list = unloader.save_pc()
         for name in name_list:
             path_to_file = os.path.join('BACKUP_UserVK', name)
-            # print(path_to_file)
+            print('Создание папки BACKUP_UserVK на Яндекс.Диск')
             directory, file_name = path_to_file.split('\\')
             uploader._add_folder(directory)
             uploader._upload((directory + '/' + name), os.path.join('BACKUP', name))
             print(f'Выгрузка файла {name} на Яндекс.Диск')
         path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'BACKUP')
-        # print(path)
         shutil.rmtree(path)
+        print('\nУдаление папки резервного копирования с компьютера\n'
+              '\n'
+              'Выгрузка файлов на Яндекс.Диск завершена')
+
 
 if __name__ == '__main__':
 
@@ -136,12 +122,8 @@ if __name__ == '__main__':
     with open('TokenYa.txt', 'r') as f:
         tokenYa = f.read().strip()
 
-    unloader = USER_VK('27513')
-
-    # pprint(unloader.save_pc())
-
-
     uploader = YaUploader(tokenYa)
 
+    unloader = USER_VK('27513')
 
-    pprint(uploader.upload_files_from_a_list())
+    uploader.upload_files_from_a_list()
