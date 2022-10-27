@@ -54,7 +54,8 @@ class USER_VK:
 
     def save_pc(self):
         """Функция скачивает контент на комп в папку BACKUP"""
-        os.mkdir('BACKUP')
+        if not os.path.isdir('BACKUP'):
+            os.mkdir('BACKUP')
         print('Создание папки BACKUP для резервного копирования на компьютере')
         path = os.path.join(os.getcwd(), 'BACKUP')
         name_list = []
@@ -103,8 +104,10 @@ class YaUploader:
         name_list = unloader.save_pc()
         print('Создание папки BACKUP_UserVK на Яндекс.Диск')
         for name in name_list:
-            path_to_file = os.path.join('BACKUP_UserVK', name)
+            fld_ya = 'BACKUP_UserVK ' + unloader.users_id
+            path_to_file = os.path.join(fld_ya, name)
             directory, file_name = path_to_file.split('\\')
+            print(directory)
             uploader._add_folder(directory)
             uploader._upload((directory + '/' + name), os.path.join('BACKUP', name))
             print(f'Выгрузка файла {name} на Яндекс.Диск')
@@ -113,6 +116,8 @@ class YaUploader:
         print('\nУдаление папки резервного копирования с компьютера\n'
               '\n'
               'Выгрузка файлов на Яндекс.Диск завершена')
+        return
+
 
 
 if __name__ == '__main__':
@@ -123,8 +128,10 @@ if __name__ == '__main__':
     with open('TokenYa.txt', 'r') as f:
         tokenYa = f.read().strip()
 
-    uploader = YaUploader(tokenYa)
+    ID = str(input('Введите UserID: '))
 
-    unloader = USER_VK('27513')
+    unloader = USER_VK(ID)
+
+    uploader = YaUploader(tokenYa)
 
     uploader.upload_files_from_a_list()
