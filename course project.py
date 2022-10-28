@@ -107,7 +107,6 @@ class YaUploader:
             fld_ya = 'BACKUP_UserVK ' + unloader.users_id
             path_to_file = os.path.join(fld_ya, name)
             directory, file_name = path_to_file.split('\\')
-            print(directory)
             uploader._add_folder(directory)
             uploader._upload((directory + '/' + name), os.path.join('BACKUP', name))
             print(f'Выгрузка файла {name} на Яндекс.Диск')
