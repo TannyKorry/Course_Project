@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 class USER_VK:
-    def __init__(self, users_id: str, album_id, count, version='5.131'):
+    def __init__(self, users_id: str, album_id, count=5, version='5.131'):
         self.url = 'https://api.vk.com/method/'
         self.users_id = users_id
         self.params = {
@@ -143,11 +143,15 @@ if __name__ == '__main__':
     if album != 'profile' or 'wall':
         album = 'profile'
 
+    unloader = USER_VK(ID, album)
+
+    print(f'Найдено {unloader._get_photo_to_unload_vk()["response"]["count"]} фотографий.')
     count = input('Какое количество фотографий загрузить? (по умолчанию загрузится 5 фото): ')
     if count == '':
         count = 5
 
     unloader = USER_VK(ID, album, count)
+
 
     uploader = YaUploader(tokenYa)
 
