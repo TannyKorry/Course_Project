@@ -1,4 +1,5 @@
 import os
+
 import requests
 import shutil
 from pprint import pprint
@@ -6,25 +7,36 @@ from datetime import datetime
 
 
 class USER_VK:
-    def __init__(self, users_id: str, count=5, version='5.131'):
+    def __init__(self, users_id: str, album_id, count, version='5.131'):
         self.url = 'https://api.vk.com/method/'
         self.users_id = users_id
         self.params = {
             'access_token': tokenVK,
+            'album_id': album_id,
             'count': count,
             'v': version
         }
 
+    def _screenName_id_definition(self):
+        """Функция определяет ID пользователя по screen-name"""
+        unload_url = self.url + 'users.get'
+        params = {
+            'user_ids': self.users_id
+        }
+        res = requests.get(unload_url, params={**self.params, **params}).json()
+        for us in res['response']:
+            id_us = us['id']
+        return id_us
+
     def _get_photo_to_unload_vk(self):
-        """Функция выдает данные по фото альбому пользователя ввиде json"""
+        """Функция выдает данные по фото альбому пользователя в виде json"""
         unload_url = self.url + 'photos.get'
         params = {
-            'owner_id': self.users_id,
-            'album_id': 'profile',
+            'owner_id': self._screenName_id_definition(),
             'extended': '1'
         }
-        response = requests.get(unload_url, params={**self.params, **params})
-        return response.json()
+        response = requests.get(unload_url, params={**self.params, **params}).json()
+        return response
 
     def _sort_ph(self):
         """отбор фоток по размеру. Фиксация количества лайков.
@@ -129,7 +141,15 @@ if __name__ == '__main__':
 
     ID = str(input('Введите UserID: '))
 
-    unloader = USER_VK(ID)
+    album = str(input('Выберите целевой профиль (необязательно - по умолчанию загрузится "profile")\n wall — фотографии со стены\n profile — фотографии профиля: '))
+    if album == '':
+        album = 'profile'
+
+    count = input('Какое количество фотографий загрузить? (по умолчанию загрузится 5 фото): ')
+    if count == '':
+        count = 5
+
+    unloader = USER_VK(ID, album, count)
 
     uploader = YaUploader(tokenYa)
 
