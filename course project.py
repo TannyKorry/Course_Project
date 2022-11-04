@@ -1,4 +1,5 @@
 import os
+import configparser
 import requests
 import shutil
 from pprint import pprint
@@ -24,8 +25,8 @@ class USER_VK:
         }
         res = requests.get(unload_url, params={**self.params, **params}).json()
         for us in res['response']:
-            id_us = us['id']
-        return id_us
+            us['id']
+        return us['id']
 
     def _get_photo_to_unload_vk(self):
         """Функция выдает данные по фото альбому пользователя в виде json"""
@@ -38,7 +39,7 @@ class USER_VK:
         return response
 
     def _sort_ph(self):
-        """отбор фоток по размеру. Фиксация количества лайков.
+        """Отбор фоток по размеру. Фиксация количества лайков.
         На выходе словарь, где ключ - ID,
         а значение - список состоящий из кол-во лайков, дата, типоразмер и url фото"""
         sizes_dict = {}
@@ -129,19 +130,17 @@ class YaUploader:
         return
 
 
-
 if __name__ == '__main__':
 
-    with open('TokenVK.txt', 'r') as file:
-        tokenVK = file.read().strip()
-
-    with open('TokenYa.txt', 'r') as f:
-        tokenYa = f.read().strip()
+    config = configparser.ConfigParser()
+    config.read('settings.ini')
+    tokenVK = config['VK']['token']
+    tokenYa = config['Ya']['token']
 
     ID = str(input('Введите UserID: '))
 
-    album = str(input('Выберите целевой профиль (необязательно - по умолчанию загрузится "profile")\n wall — фотографии со стены\n profile — фотографии профиля: '))
-    if album == '':
+    album = str(input('Выберите целевой профиль (по умолчанию загрузится "profile"):\n wall — фотографии со стены\n profile — фотографии профиля: '))
+    if album != 'profile' or 'wall':
         album = 'profile'
 
     count = input('Какое количество фотографий загрузить? (по умолчанию загрузится 5 фото): ')
