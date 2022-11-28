@@ -1,7 +1,5 @@
-import os
 import configparser
 import requests
-import shutil
 from pprint import pprint
 from datetime import datetime
 
@@ -41,7 +39,7 @@ class USER_VK:
     def _sort_ph(self):
         """Отбор фоток по размеру. Фиксация количества лайков.
         На выходе словарь, где ключ - ID,
-        а значение - список состоящий из кол-во лайков, дата, типоразмер и url фото"""
+        а значение - список состоящий из кол-ва лайков, даты, типоразмера и url фото"""
         sizes_dict = {}
         for album in self._get_photo_to_unload_vk()['response']['items']:
             likes = str(album['likes']['count'])
@@ -64,23 +62,6 @@ class USER_VK:
                 photo_dict[str(attribute[0]) + '_' + str(attribute[1]) + '.jpg'] = attribute[-2:]
         return photo_dict
 
-    def save_pc(self):
-        """Функция скачивает контент на комп в папку BACKUP"""
-        if not os.path.isdir('BACKUP'):
-            os.mkdir('BACKUP')
-        print('Создание папки BACKUP для резервного копирования на компьютере')
-        path = os.path.join(os.getcwd(), 'BACKUP')
-        name_list = []
-        for name, props in self._name_creating().items():
-            print(f'Загрузка файла: {name}, size: {props[-2]}')
-            full_path = os.path.join(path, str(name))
-            name_list.append(name)
-            ph = requests.get(props[-1])
-            out = open(full_path, "wb")
-            out.write(ph.content)
-            out.close()
-        return name_list
-
 
 class YaUploader:
     def __init__(self, token: str):
@@ -93,39 +74,27 @@ class YaUploader:
             'Authorization': f'OAuth {self.token}'
         }
 
-    def _get_upload_link(self, file_path):
-        upload_url = self.url + 'upload'
-        headers = self._get_headers()
-        params = {'path': file_path, 'overwrite': 'true'}
-        response = requests.get(upload_url, headers=headers, params=params)
-        return response.json()
-
     def _add_folder(self, path):
         headers = self._get_headers()
-        requests.put(f'{self.url}?path={path}', headers=headers)
+        params = {'overwrite': 'true'}
+        requests.put(f'{self.url}?path={path}', headers=headers, params=params)
 
     def _upload(self, file_path, path_to_file):
-        link_dict = self._get_upload_link(file_path=file_path)
-        href = link_dict['href']
-        response = requests.put(href, data=open(path_to_file, 'rb'))
+        headers = self._get_headers()
+        params = {'path': file_path, 'url': path_to_file}
+        response = requests.post(self.url + 'upload', headers=headers, params=params )
         response.raise_for_status()
-        if response.status_code == 201:
+        if response.status_code in range(200, 300):
             print('Success')
 
-    def upload_files_from_a_list(self):
-        name_list = unloader.save_pc()
-        print('Создание папки BACKUP_UserVK на Яндекс.Диск')
-        for name in name_list:
-            fld_ya = 'BACKUP_UserVK ' + unloader.users_id
-            path_to_file = os.path.join(fld_ya, name)
-            directory, file_name = path_to_file.split('\\')
-            uploader._add_folder(directory)
-            uploader._upload((directory + '/' + name), os.path.join('BACKUP', name))
-            print(f'Выгрузка файла {name} на Яндекс.Диск')
-        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'BACKUP')
-        shutil.rmtree(path)
-        print('\nУдаление папки резервного копирования с компьютера\n'
-              '\n'
+    def upload_files_from_a_list(self, unloader):
+        print('\n'f'Создание папки BACKUP_UserVK_{unloader.users_id} на Яндекс.Диск')
+        directory = 'BACKUP_UserVK_' + unloader.users_id
+        self._add_folder(directory)
+        for file_name, from_ in unloader._name_creating().items():
+            self._upload((directory + '/' + file_name), from_[-1])
+            print(f'Выгрузка файла {file_name} на Яндекс.Диск')
+        print('\n'
               'Выгрузка файлов на Яндекс.Диск завершена')
         return
 
@@ -146,7 +115,7 @@ if __name__ == '__main__':
     unloader = USER_VK(ID, album)
 
     print(f'Найдено {unloader._get_photo_to_unload_vk()["response"]["count"]} фотографий.')
-    count = input('Какое количество фотографий загрузить? (по умолчанию загрузится 5 фото): ')
+    count = input('Какое количество фотографий загрузить? (по умолчанию загрузится до 5 фото): ')
     if count == '':
         count = 5
 
@@ -155,4 +124,4 @@ if __name__ == '__main__':
 
     uploader = YaUploader(tokenYa)
 
-    uploader.upload_files_from_a_list()
+    uploader.upload_files_from_a_list(unloader)
